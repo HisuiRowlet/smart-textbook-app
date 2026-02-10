@@ -1,0 +1,217 @@
+{% extends 'textbook/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="note-detail-container">
+        <!-- Navigation -->
+        <div class="navigation">
+            <a href="{% url 'textbook:notebook_list' %}" class="back-link">
+                ← Back to Notes
+            </a>
+        </div>
+
+        <!-- Note Header -->
+        <div class="note-detail-header">
+            <div class="note-title-section">
+                <h1 class="note-detail-title">{{ note.title }}</h1>
+                <div class="note-meta">
+                    <span class="meta-item">
+                        <strong>Created:</strong> {{ note.created_at|date:"M d, Y H:i" }}
+                    </span>
+                    <span class="meta-item">
+                        <strong>Updated:</strong> {{ note.updated_at|date:"M d, Y H:i" }}
+                    </span>
+                    {% if note.tags %}
+                    <span class="meta-item tags">
+                        <strong>Tags:</strong> 
+                        {% for tag in note.tags.split %}
+                        <span class="note-tag">{{ tag }}</span>
+                        {% endfor %}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="note-actions">
+                <a href="{% url 'textbook:edit_note' note.id %}" class="btn btn-edit">
+                    ✏️ Edit
+                </a>
+                <a href="{% url 'textbook:delete_note' note.id %}" class="btn btn-danger">
+                    🗑️ Delete
+                </a>
+            </div>
+        </div>
+
+        <!-- Note Content -->
+        <div class="note-content-full">
+            {{ note.content|linebreaks }}
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="navigation-footer">
+            <a href="{% url 'textbook:notebook_list' %}" class="btn btn-secondary">
+                ← Back to All Notes
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.note-detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.navigation {
+    margin-bottom: 2rem;
+}
+
+.back-link {
+    color: var(--text-light);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
+.note-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-light);
+    gap: 2rem;
+}
+
+.note-title-section {
+    flex: 1;
+}
+
+.note-detail-title {
+    color: var(--text);
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 1rem 0;
+    line-height: 1.2;
+}
+
+.note-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.meta-item {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.meta-item strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.meta-item.tags {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.note-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.note-actions .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-edit {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-edit:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: var(--error);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.note-content-full {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    line-height: 1.7;
+    font-size: 1.125rem;
+    color: var(--text);
+    margin-bottom: 2rem;
+    min-height: 300px;
+}
+
+.note-content-full p {
+    margin-bottom: 1.5rem;
+}
+
+.note-content-full p:last-child {
+    margin-bottom: 0;
+}
+
+.navigation-footer {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-light);
+}
+
+.navigation-footer .btn {
+    padding: 0.75rem 2rem;
+}
+
+@media (max-width: 768px) {
+    .note-detail-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .note-detail-title {
+        font-size: 2rem;
+    }
+    
+    .note-actions {
+        align-self: stretch;
+        justify-content: center;
+    }
+    
+    .note-content-full {
+        padding: 1.5rem;
+    }
+    
+    .note-meta {
+        align-items: center;
+    }
+}
+</style>
+{% endblock %}

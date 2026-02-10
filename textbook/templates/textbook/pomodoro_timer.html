@@ -1,0 +1,484 @@
+{% extends 'textbook/base.html' %}
+
+{% block content %}
+<div class="pomodoro-container">
+    <div class="pomodoro-header">
+        <h1>🍅 Pomodoro Timer</h1>
+        <p>Focus on your studies with the Pomodoro technique</p>
+    </div>
+
+    <div class="pomodoro-grid">
+        <!-- Timer Section -->
+        <div class="timer-section">
+            <div class="timer-card">
+                <div class="timer-display">
+                    <div id="timer-minutes">25</div>
+                    <div id="timer-colon">:</div>
+                    <div id="timer-seconds">00</div>
+                </div>
+                
+                <div class="timer-status" id="timer-status">
+                    Ready to focus!
+                </div>
+                
+                <div class="timer-controls">
+                    <button class="btn btn-primary" id="start-btn" onclick="startTimer()">
+                        Start Focus Session
+                    </button>
+                    <button class="btn btn-secondary" id="pause-btn" onclick="pauseTimer()" style="display: none;">
+                        Pause
+                    </button>
+                    <button class="btn btn-danger" id="reset-btn" onclick="resetTimer()">
+                        Reset
+                    </button>
+                </div>
+
+                <!-- Session Type Selection -->
+                <div class="session-selection">
+                    <h4>Session Type</h4>
+                    <div class="session-buttons">
+                        <button class="session-btn active" data-type="WORK" data-duration="25" onclick="selectSession(this)">
+                            🎯 Work (25 min)
+                        </button>
+                        <button class="session-btn" data-type="SHORT_BREAK" data-duration="5" onclick="selectSession(this)">
+                            ☕ Short Break (5 min)
+                        </button>
+                        <button class="session-btn" data-type="LONG_BREAK" data-duration="15" onclick="selectSession(this)">
+                            🌴 Long Break (15 min)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lesson Selection -->
+                <div class="lesson-selection">
+                    <h4>Study Material (Optional)</h4>
+                    <select id="lesson-select" class="form-control">
+                        <option value="">Select a lesson to focus on...</option>
+                        {% for lesson in lessons %}
+                            <option value="{{ lesson.id }}">{{ lesson.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stats-card">
+                <h3>Today's Progress</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ today_focus_minutes }}</div>
+                        <div class="stat-label">Minutes Focused</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ today_session_count }}</div>
+                        <div class="stat-label">Sessions Completed</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Sessions -->
+            <div class="sessions-card">
+                <h3>Recent Sessions</h3>
+                {% if recent_sessions %}
+                    <div class="sessions-list">
+                        {% for session in recent_sessions %}
+                            <div class="session-item {% if session.completed %}completed{% else %}active{% endif %}">
+                                <div class="session-type">
+                                    {% if session.session_type == 'WORK' %}
+                                        🎯 Work
+                                    {% elif session.session_type == 'SHORT_BREAK' %}
+                                        ☕ Short Break
+                                    {% else %}
+                                        🌴 Long Break
+                                    {% endif %}
+                                </div>
+                                <div class="session-duration">{{ session.duration_minutes }} min</div>
+                                <div class="session-time">{{ session.start_time|timesince }} ago</div>
+                                {% if session.lesson %}
+                                    <div class="session-lesson">{{ session.lesson.title|truncatewords:3 }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-sessions">No sessions yet. Start your first Pomodoro session!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{% url 'textbook:pomodoro_stats' %}" class="btn btn-outline">
+            📊 View Detailed Statistics
+        </a>
+        <a href="{% url 'textbook:home' %}" class="btn btn-outline">
+            📚 Back to Lessons
+        </a>
+    </div>
+</div>
+
+<script>
+let timer;
+let timeLeft = 25 * 60; // 25 minutes in seconds
+let isRunning = false;
+let currentSessionType = 'WORK';
+let currentDuration = 25;
+
+function updateDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    
+    document.getElementById('timer-minutes').textContent = minutes.toString().padStart(2, '0');
+    document.getElementById('timer-seconds').textContent = seconds.toString().padStart(2, '0');
+}
+
+function startTimer() {
+    if (!isRunning) {
+        isRunning = true;
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('pause-btn').style.display = 'inline-block';
+        document.getElementById('timer-status').textContent = 'Focus! Session in progress...';
+        
+        timer = setInterval(() => {
+            timeLeft--;
+            updateDisplay();
+            
+            if (timeLeft <= 0) {
+                completeTimer();
+            }
+        }, 1000);
+    }
+}
+
+function pauseTimer() {
+    if (isRunning) {
+        isRunning = false;
+        clearInterval(timer);
+        document.getElementById('start-btn').style.display = 'inline-block';
+        document.getElementById('pause-btn').style.display = 'none';
+        document.getElementById('timer-status').textContent = 'Paused';
+    }
+}
+
+function resetTimer() {
+    isRunning = false;
+    clearInterval(timer);
+    timeLeft = currentDuration * 60;
+    updateDisplay();
+    document.getElementById('start-btn').style.display = 'inline-block';
+    document.getElementById('pause-btn').style.display = 'none';
+    document.getElementById('timer-status').textContent = 'Ready to focus!';
+}
+
+function selectSession(button) {
+    // Remove active class from all buttons
+    document.querySelectorAll('.session-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to clicked button
+    button.classList.add('active');
+    
+    // Update current session type and duration
+    currentSessionType = button.dataset.type;
+    currentDuration = parseInt(button.dataset.duration);
+    
+    // Reset timer with new duration
+    timeLeft = currentDuration * 60;
+    updateDisplay();
+    resetTimer();
+    
+    // Update status message
+    let statusMessage = 'Ready to focus!';
+    if (currentSessionType === 'SHORT_BREAK') {
+        statusMessage = 'Time for a short break!';
+    } else if (currentSessionType === 'LONG_BREAK') {
+        statusMessage = 'Time for a long break!';
+    }
+    document.getElementById('timer-status').textContent = statusMessage;
+}
+
+function completeTimer() {
+    isRunning = false;
+    clearInterval(timer);
+    
+    // Show completion message
+    document.getElementById('timer-status').textContent = 'Session Complete! 🎉';
+    document.getElementById('start-btn').style.display = 'inline-block';
+    document.getElementById('pause-btn').style.display = 'none';
+    
+    // Send completion to server
+    const lessonId = document.getElementById('lesson-select').value;
+    const formData = new FormData();
+    formData.append('session_type', currentSessionType);
+    formData.append('duration', currentDuration);
+    if (lessonId) {
+        formData.append('lesson_id', lessonId);
+    }
+    
+    fetch('{% url "textbook:start_pomodoro_session" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    }).then(response => {
+        if (response.ok) {
+            // Reload page to update stats
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    });
+}
+
+// Initialize timer display
+updateDisplay();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (isRunning) {
+            pauseTimer();
+        } else {
+            startTimer();
+        }
+    } else if (e.code === 'Escape') {
+        resetTimer();
+    }
+});
+</script>
+
+<style>
+.pomodoro-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.pomodoro-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.pomodoro-header h1 {
+    font-size: 3rem;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.pomodoro-header p {
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.pomodoro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 968px) {
+    .pomodoro-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.timer-card {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 5rem;
+    font-weight: 700;
+    color: #4361ee;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', monospace;
+}
+
+#timer-colon {
+    margin: 0 0.5rem;
+}
+
+.timer-status {
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-bottom: 2rem;
+    font-weight: 600;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.session-selection {
+    margin-bottom: 2rem;
+}
+
+.session-selection h4 {
+    margin-bottom: 1rem;
+    color: #2d3748;
+}
+
+.session-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.session-btn {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.session-btn:hover {
+    border-color: #4361ee;
+    background: #f8faff;
+}
+
+.session-btn.active {
+    background: #4361ee;
+    color: white;
+    border-color: #4361ee;
+}
+
+.lesson-selection {
+    margin-bottom: 1rem;
+}
+
+.lesson-selection h4 {
+    margin-bottom: 0.5rem;
+    color: #2d3748;
+}
+
+.stats-card, .sessions-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.stats-card h3, .sessions-card h3 {
+    margin-bottom: 1.5rem;
+    color: #2d3748;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #4361ee;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.sessions-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.session-item:last-child {
+    border-bottom: none;
+}
+
+.session-item.completed {
+    opacity: 0.7;
+}
+
+.session-type {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.session-duration {
+    color: #4361ee;
+    font-weight: 600;
+}
+
+.session-time {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.session-lesson {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.no-sessions {
+    text-align: center;
+    color: #6c757d;
+    padding: 2rem;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4361ee;
+}
+</style>
+{% endblock %}

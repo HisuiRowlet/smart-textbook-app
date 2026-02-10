@@ -1,0 +1,22 @@
+{% extends 'textbook/base.html' %}
+
+{% block content %}
+<h2>Ollama Test</h2>
+
+<div style="padding: 20px; border: 1px solid #ccc; margin: 20px 0;">
+    <p><strong>Status:</strong> {{ status }}</p>
+    <p><strong>Response:</strong> {{ test_result }}</p>
+</div>
+
+{% if status == 'SUCCESS' %}
+    <div style="background: #d4edda; padding: 15px; border-radius: 5px;">
+        <strong>🎉 Success!</strong> Ollama is working correctly.
+    </div>
+{% else %}
+    <div style="background: #f8d7da; padding: 15px; border-radius: 5px;">
+        <strong>⚠️ Issue Detected:</strong> {{ test_result }}
+    </div>
+{% endif %}
+
+<p><a href="{% url 'textbook:home' %}">← Back to Home</a></p>
+{% endblock %}

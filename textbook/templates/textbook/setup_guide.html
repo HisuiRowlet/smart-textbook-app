@@ -1,0 +1,80 @@
+<!-- textbook/templates/textbook/setup_guide.html -->
+{% extends 'textbook/base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>🛠️ AI Setup Guide</h2>
+    
+    <div class="setup-steps">
+        <div class="step">
+            <h3>1. Install Ollama</h3>
+            <p>Download and install Ollama from <a href="https://ollama.ai" target="_blank">ollama.ai</a></p>
+        </div>
+        
+        <div class="step">
+            <h3>2. Pull a Model</h3>
+            <p>Open terminal and run one of these commands:</p>
+            <pre>
+# For smaller, faster models:
+ollama pull llama2:7b
+# or
+ollama pull gemma:2b
+
+# For better quality (requires more RAM):
+ollama pull llama2
+# or  
+ollama pull mistral
+            </pre>
+        </div>
+        
+        <div class="step">
+            <h3>3. Start Ollama</h3>
+            <p>Ollama should start automatically. If not, run:</p>
+            <pre>ollama serve</pre>
+        </div>
+        
+        <div class="step">
+            <h3>4. Check Status</h3>
+            <p>Visit the <a href="{% url 'textbook:ai_status' %}">AI Status</a> page to verify everything is working.</p>
+        </div>
+    </div>
+    
+    <div class="actions">
+        <a href="{% url 'textbook:ai_status' %}" class="btn btn-primary">Check Status</a>
+        <a href="{% url 'textbook:upload' %}" class="btn btn-secondary">Try Upload</a>
+    </div>
+</div>
+
+<style>
+.setup-steps {
+    margin: 2rem 0;
+}
+
+.step {
+    background: white;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    border-left: 4px solid #4361ee;
+}
+
+.step h3 {
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.step pre {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}

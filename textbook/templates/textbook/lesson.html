@@ -1,0 +1,495 @@
+{% extends 'textbook/base.html' %}
+
+{% block content %}
+<div class="lesson-container">
+    <div class="lesson-header">
+        <h1>{{ lesson.title }}</h1>
+        <div class="lesson-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 30%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lesson-content">
+        <div class="content-card">
+            {{ lesson.content|linebreaks }}
+        </div>
+    </div>
+
+    <!-- Debug section to see what data we have -->
+    {% if quizzes %}
+    <div class="debug-info" style="background: #f8f9fa; padding: 1rem; margin: 1rem 0; border-radius: 8px; display: none;">
+        <h4>Debug Info ({{ quizzes|length }} quizzes found):</h4>
+        {% for quiz in quizzes %}
+            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px;">
+                <p><strong>Quiz {{ forloop.counter }} ID:</strong> {{ quiz.id }}</p>
+                <p><strong>Question:</strong> {{ quiz.question }}</p>
+                <p><strong>Options:</strong> {{ quiz.options }}</p>
+                <p><strong>Correct Answer:</strong> {{ quiz.answer }}</p>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if quizzes %}
+    <div class="quiz-section">
+        <h2>Test Your Knowledge</h2>
+        {% for quiz in quizzes %}
+            <div class="quiz-card" data-quiz-id="{{ quiz.id }}">
+                <h3>Question {{ forloop.counter }}</h3>
+                <p class="quiz-question">{{ quiz.question }}</p>
+                <div class="quiz-options">
+                    {% for key, value in quiz.options.items %}
+                        <button class="option-btn" data-quiz="{{ quiz.id }}" data-answer="{{ key }}" data-correct="{{ quiz.answer }}">
+                            <span class="option-letter">{{ key }}</span>
+                            {{ value }}
+                        </button>
+                    {% empty %}
+                        <p class="no-options">No options available for this question.</p>
+                    {% endfor %}
+                </div>
+                <div class="quiz-result" id="result-{{ quiz.id }}"></div>
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-quiz-message">
+        <div class="empty-icon">❓</div>
+        <h3>No quizzes available yet</h3>
+        <p>This lesson doesn't have any quizzes yet. Check back later or contact your instructor.</p>
+        
+        <!-- Sample quiz for demonstration -->
+        <div class="sample-quiz">
+            <h4>Here's how quizzes will look:</h4>
+            <div class="quiz-card sample">
+                <h3>Sample Question</h3>
+                <p class="quiz-question">What is the capital of France?</p>
+                <div class="quiz-options">
+                    <button class="option-btn sample-option" data-answer="A">
+                        <span class="option-letter">A</span>
+                        London
+                    </button>
+                    <button class="option-btn sample-option" data-answer="B">
+                        <span class="option-letter">B</span>
+                        Paris
+                    </button>
+                    <button class="option-btn sample-option" data-answer="C">
+                        <span class="option-letter">C</span>
+                        Berlin
+                    </button>
+                    <button class="option-btn sample-option" data-answer="D">
+                        <span class="option-letter">D</span>
+                        Madrid
+                    </button>
+                </div>
+                <div class="quiz-result sample-result"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="lesson-navigation">
+        <button class="btn btn-secondary" id="prev-btn">Previous</button>
+        <button class="btn btn-primary" id="next-btn">Next Lesson</button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Real quiz functionality
+    document.querySelectorAll('.option-btn:not(.sample-option)').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const quizCard = this.closest('.quiz-card');
+            const selectedAnswer = this.dataset.answer;
+            const quizId = this.dataset.quiz;
+            const correctAnswer = this.dataset.correct;
+            
+            // Remove selected class from all buttons in this quiz
+            quizCard.querySelectorAll('.option-btn').forEach(b => {
+                b.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked button
+            this.classList.add('selected');
+            
+            // Disable all options in this quiz
+            quizCard.querySelectorAll('.option-btn').forEach(b => {
+                b.disabled = true;
+            });
+            
+            // Show result
+            const result = document.getElementById(`result-${quizId}`);
+            result.style.display = 'block';
+            
+            // Check if answer is correct
+            const isCorrect = (selectedAnswer === correctAnswer);
+            
+            if (isCorrect) {
+                result.textContent = '✅ Correct! Well done.';
+                result.className = 'quiz-result correct';
+                quizCard.classList.add('answered-correctly');
+            } else {
+                result.textContent = `❌ Incorrect. The correct answer is ${correctAnswer}.`;
+                result.className = 'quiz-result incorrect';
+                quizCard.classList.add('answered-incorrectly');
+                
+                // Highlight correct answer
+                quizCard.querySelectorAll('.option-btn').forEach(b => {
+                    if (b.dataset.answer === correctAnswer) {
+                        b.classList.add('correct-answer');
+                    }
+                });
+            }
+            
+            // Update progress
+            updateQuizProgress();
+        });
+    });
+    
+    // Sample quiz functionality (for demonstration)
+    document.querySelectorAll('.sample-option').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const quizCard = this.closest('.quiz-card');
+            const selectedAnswer = this.dataset.answer;
+            const result = quizCard.querySelector('.sample-result');
+            
+            quizCard.querySelectorAll('.sample-option').forEach(b => {
+                b.classList.remove('selected');
+                b.disabled = true;
+            });
+            
+            this.classList.add('selected');
+            result.style.display = 'block';
+            
+            if (selectedAnswer === 'B') {
+                result.textContent = '✅ Correct! Paris is the capital of France.';
+                result.className = 'quiz-result correct';
+            } else {
+                result.textContent = '❌ Incorrect. The correct answer is B (Paris).';
+                result.className = 'quiz-result incorrect';
+                quizCard.querySelector('.sample-option[data-answer="B"]').classList.add('correct-answer');
+            }
+        });
+    });
+    
+    // Navigation buttons
+    document.getElementById('prev-btn').addEventListener('click', function() {
+        // Add your navigation logic here
+        alert('Previous lesson navigation would go here');
+    });
+    
+    document.getElementById('next-btn').addEventListener('click', function() {
+        // Add your navigation logic here
+        alert('Next lesson navigation would go here');
+    });
+    
+    function updateQuizProgress() {
+        const totalQuizzes = document.querySelectorAll('.quiz-card:not(.sample)').length;
+        const completedQuizzes = document.querySelectorAll('.quiz-card:not(.sample) .option-btn:disabled').length / 4; // Assuming 4 options per quiz
+        
+        if (totalQuizzes > 0) {
+            const progress = (completedQuizzes / totalQuizzes) * 100;
+            document.querySelector('.progress-fill').style.width = `${progress}%`;
+            
+            if (completedQuizzes === totalQuizzes) {
+                showCompletionMessage();
+            }
+        }
+    }
+    
+    function showCompletionMessage() {
+        const message = document.createElement('div');
+        message.className = 'completion-message';
+        message.innerHTML = `
+            <div class="message-content">
+                <h3>🎉 Lesson Complete!</h3>
+                <p>Great job completing all the quizzes!</p>
+                <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Continue</button>
+            </div>
+        `;
+        message.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+        `;
+        document.body.appendChild(message);
+    }
+    
+    // Toggle debug info with Ctrl+D
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'd') {
+            e.preventDefault();
+            const debugInfo = document.querySelector('.debug-info');
+            if (debugInfo) {
+                debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.lesson-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.lesson-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.lesson-header h1 {
+    font-size: 2.5rem;
+    color: #2d3748;
+    margin-bottom: 1rem;
+}
+
+.lesson-progress {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.progress-bar {
+    background: #e2e8f0;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: #4361ee;
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.lesson-content {
+    margin-bottom: 3rem;
+}
+
+.content-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    line-height: 1.7;
+}
+
+.quiz-section {
+    margin: 4rem 0;
+}
+
+.quiz-section h2 {
+    text-align: center;
+    color: #2d3748;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.quiz-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.quiz-card:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.quiz-card h3 {
+    color: #4361ee;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.quiz-question {
+    font-size: 1.1rem;
+    color: #2d3748;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.option-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.option-btn:hover {
+    border-color: #4361ee;
+    background: #f8faff;
+    transform: translateX(5px);
+}
+
+.option-btn.selected {
+    background: #4361ee;
+    color: white;
+    border-color: #4361ee;
+}
+
+.option-btn.correct-answer {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.option-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.option-letter {
+    font-weight: 700;
+    font-size: 1.1rem;
+    min-width: 20px;
+}
+
+.quiz-result {
+    margin-top: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    display: none;
+    font-weight: 600;
+    animation: slideDown 0.3s ease;
+}
+
+.quiz-result.correct {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.quiz-result.incorrect {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.answered-correctly {
+    border-left: 4px solid #10b981;
+}
+
+.answered-incorrectly {
+    border-left: 4px solid #ef4444;
+}
+
+.no-quiz-message {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin: 2rem 0;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.no-quiz-message h3 {
+    color: #2d3748;
+    margin-bottom: 1rem;
+}
+
+.no-quiz-message p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+.sample-quiz {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.sample-quiz h4 {
+    color: #6c757d;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.lesson-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.no-options {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .lesson-container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .lesson-header h1 {
+        font-size: 2rem;
+    }
+    
+    .content-card,
+    .quiz-card {
+        padding: 1.5rem;
+    }
+    
+    .option-btn {
+        padding: 0.875rem 1.25rem;
+    }
+    
+    .lesson-navigation {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .lesson-navigation .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

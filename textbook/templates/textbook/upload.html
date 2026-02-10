@@ -1,0 +1,300 @@
+{% extends 'textbook/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-card">
+        <div class="upload-header">
+            <h1>Upload Document</h1>
+            <p>Upload PDF or DOCX files to create interactive lessons</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="upload-form" id="upload-form">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="error-message">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.file.id_for_label }}" class="form-label">Select Document</label>
+                <div class="file-upload-area" id="file-upload-area">
+                    <div class="upload-placeholder">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text">Click to browse or drag and drop your file here</p>
+                        <p class="upload-subtext">Supports: PDF, DOCX (Max: 10MB)</p>
+                    </div>
+                    <!-- FIXED: Make sure the file input is properly connected -->
+                    {{ form.file }}
+                </div>
+                {% if form.file.errors %}
+                    <div class="error-message">
+                        {{ form.file.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- FIXED: Hidden input to ensure file gets submitted -->
+            <input type="hidden" name="file" id="hidden-file-input">
+
+            <button type="submit" class="btn btn-primary btn-full" id="upload-btn">
+                <span class="btn-text">Upload & Process</span>
+                <div class="loading-spinner" style="display: none;"></div>
+            </button>
+        </form>
+
+        <div class="upload-info">
+            <h3>What happens next?</h3>
+            <ul class="info-list">
+                <li>✅ Document text will be extracted automatically</li>
+                <li>✅ AI will generate a simplified explanation</li>
+                <!-- REMOVED: Key concepts line -->
+                <li>✅ Interactive quiz will be created</li>
+                <li>⏱️ Processing usually takes 10-30 seconds</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Add these styles to ensure proper file input handling */
+.file-upload-area {
+    position: relative;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+.file-upload-area:hover {
+    border-color: #4361ee;
+    background: #f0f4ff;
+}
+
+.file-upload-area.dragover {
+    border-color: #4361ee;
+    background: #e8f0fe;
+}
+
+/* Hide the actual file input but keep it functional */
+.file-upload-area input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-selected {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.file-icon {
+    font-size: 2rem;
+}
+
+.file-info {
+    flex: 1;
+    text-align: left;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.file-size {
+    color: #718096;
+    font-size: 0.875rem;
+}
+
+.change-file-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.change-file-btn:hover {
+    background: #5a6268;
+}
+
+.error-message {
+    color: #dc3545;
+    background: #f8d7da;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+    border: 1px solid #f5c6cb;
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"]');
+    const uploadArea = document.getElementById('file-upload-area');
+    const uploadBtn = document.getElementById('upload-btn');
+    const btnText = uploadBtn.querySelector('.btn-text');
+    const spinner = uploadBtn.querySelector('.loading-spinner');
+    const form = document.getElementById('upload-form');
+
+    // Ensure file input has proper attributes
+    if (fileInput) {
+        fileInput.setAttribute('accept', '.pdf,.docx,.doc');
+        fileInput.setAttribute('required', 'required');
+    }
+
+    // File upload area interactions
+    uploadArea.addEventListener('click', (e) => {
+        // Only trigger file input if not clicking on change button
+        if (!e.target.closest('.change-file-btn')) {
+            fileInput.click();
+        }
+    });
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileDisplay();
+            
+            // Trigger change event to ensure form recognizes the file
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        }
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        updateFileDisplay();
+        
+        // Validate file type and size
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload only PDF or DOCX files.');
+                this.value = '';
+                resetFileDisplay();
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                alert('File size must be less than 10MB.');
+                this.value = '';
+                resetFileDisplay();
+                return;
+            }
+        }
+    });
+
+    function updateFileDisplay() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            uploadArea.innerHTML = `
+                <div class="file-selected">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                    <button type="button" class="change-file-btn">Change</button>
+                </div>
+                <input type="file" name="file" id="${fileInput.id}" accept=".pdf,.docx,.doc" required style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+            `;
+            
+            // Re-attach the file to the new input
+            const newFileInput = uploadArea.querySelector('input[type="file"]');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            newFileInput.files = dataTransfer.files;
+            
+            // Update reference to the new file input
+            fileInput.remove();
+            fileInput = newFileInput;
+            
+            // Add event listener to change button
+            uploadArea.querySelector('.change-file-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+            
+            // Re-attach change event listener
+            fileInput.addEventListener('change', updateFileDisplay);
+        }
+    }
+
+    function resetFileDisplay() {
+        uploadArea.innerHTML = `
+            <div class="upload-placeholder">
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">Click to browse or drag and drop your file here</p>
+                <p class="upload-subtext">Supports: PDF, DOCX (Max: 10MB)</p>
+            </div>
+            <input type="file" name="file" accept=".pdf,.docx,.doc" required style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+        `;
+        
+        // Update reference
+        fileInput = uploadArea.querySelector('input[type="file"]');
+        fileInput.addEventListener('change', updateFileDisplay);
+    }
+
+    // Form submission loading state
+    form.addEventListener('submit', function(e) {
+        // Validate file is selected
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select a file to upload.');
+            return;
+        }
+        
+        btnText.textContent = 'Processing...';
+        spinner.style.display = 'inline-block';
+        uploadBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}
