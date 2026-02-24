@@ -23,3 +23,4 @@ An AI-powered smart textbook platform developed as an academic team project.
 - Enhanced AI summarization
 - Mobile application support
 - Improved UI/UX
+
