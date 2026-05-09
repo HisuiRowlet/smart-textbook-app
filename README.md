@@ -14,8 +14,8 @@ An AI-powered smart textbook platform developed as an academic team project.
 - Python
 
 ## Team Members
-- 
--
+- Jithiya Janane A - Frontend Development 
+- Leona Ida Pranuhya Moragudi - Frontend Development
 - Maahi Singh - Backend Development 
 - Madhava Rao – Backend Development
 
